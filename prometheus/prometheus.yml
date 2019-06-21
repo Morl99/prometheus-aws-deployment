@@ -1,0 +1,12 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 30s
+  # scrape_timeout is set to the global default (10s).
+
+scrape_configs:
+  - job_name: 'node'
+    ec2_sd_configs:
+      - region: eu-central-1
+        access_key: PUT_THE_ACCESS_KEY_HERE
+        secret_key: PUT_THE_SECRET_KEY_HERE
+        port: 9100
