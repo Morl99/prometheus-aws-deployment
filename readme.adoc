@@ -9,9 +9,16 @@ The goal of this project is to deploy a Prometheus installation in AWS using Ter
 The following assumptions are made about the environment where this deployment can be used
 
 . All Deployments are done in an AWS VPC with direct internet access, so no Proxy is needed.
+. I just assume, there exists an IAM user with the necessary permissions to run all the terraform commands. Of course setting this up securely in reality might be a task on its own. In my demo account, I just use an IAM user with the `AdministratorAccess` policy.
 
 == Out of scope
 
 The following things are out of scope for this project, but could be required to actually use it in a production environment
 
 . High availability of the Prometheus installation
+. Store tfstate files
+.. I cannot check them into source control, as these files also contain secrets. While it seems possible to encrypt them, it would probably be wiser to store the state in some other backend. I just added the files to .gitignore for the time being.
+
+== Architecture
+
+The prometheus server is deployed as an ECS container.
