@@ -12,4 +12,4 @@ scrape_configs:
         port: 9100
     relabel_configs:
       - source_labels: [__meta_ec2_instance_id]
-      target_label: instance
+        target_label: instance
