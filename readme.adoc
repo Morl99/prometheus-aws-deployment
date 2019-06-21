@@ -29,3 +29,4 @@ Using several resources on the web, the following were helpful in particular, an
 
 https://hackernoon.com/introduction-to-aws-with-terraform-7a8daf261dc0
 https://www.robustperception.io/automatically-monitoring-ec2-instances
+https://github.com/Oxalide/terraform-fargate-example

@@ -32,3 +32,8 @@ resource "aws_iam_user_policy" "prometheus_describe" {
 }
 EOF
 }
+
+resource "aws_ebs_volume" "prometheus_volume" {
+  availability_zone = "eu-central-1a"
+  size              = 80
+}

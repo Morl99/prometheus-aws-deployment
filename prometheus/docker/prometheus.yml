@@ -10,3 +10,6 @@ scrape_configs:
         access_key: ${ACCESS_KEY}
         secret_key: ${SECRET_KEY}
         port: 9100
+    relabel_configs:
+      - source_labels: [__meta_ec2_instance_id]
+      target_label: instance
