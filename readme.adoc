@@ -22,3 +22,10 @@ The following things are out of scope for this project, but could be required to
 == Architecture
 
 The prometheus server is deployed as an ECS container.
+
+== References
+
+Using several resources on the web, the following were helpful in particular, and some of the code is copied from there:
+
+https://hackernoon.com/introduction-to-aws-with-terraform-7a8daf261dc0
+https://www.robustperception.io/automatically-monitoring-ec2-instances
