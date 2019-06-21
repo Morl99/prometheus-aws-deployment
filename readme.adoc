@@ -1,0 +1,17 @@
+= Prometheus AWS Deployment
+
+== Goal
+
+The goal of this project is to deploy a Prometheus installation in AWS using Terraform. Prometheus should use automatic EC2 discovery to discover new EC2 nodes. This project firmly follows infrastructure of code principle. Except where otherwise noted, no pre-existent infrastructure is needed.
+
+== Prerequisites
+
+The following assumptions are made about the environment where this deployment can be used
+
+. All Deployments are done in an AWS VPC with direct internet access, so no Proxy is needed.
+
+== Out of scope
+
+The following things are out of scope for this project, but could be required to actually use it in a production environment
+
+. High availability of the Prometheus installation
