@@ -16,12 +16,18 @@ The following assumptions are made about the environment where this deployment c
 The following things are out of scope for this project, but could be required to actually use it in a production environment
 
 . High availability of the Prometheus installation
+. Secure VPC Setup
 . Store tfstate files
 .. I cannot check them into source control, as these files also contain secrets. While it seems possible to encrypt them, it would probably be wiser to store the state in some other backend. I just added the files to .gitignore for the time being.
 
 == Architecture
 
+=== Prometheus
 The prometheus server is deployed as an ECS container.
+
+=== EC2-Node
+
+The node itself if just a simple ec2 node that does nothing, but expose some metrics on port 9100. It resides in a public subnet, mainly to allow me to access it via ssh (of course usually we have a better concept for this, like a bastion host, or a vpn).
 
 == References
 
@@ -29,4 +35,5 @@ Using several resources on the web, the following were helpful in particular, an
 
 https://hackernoon.com/introduction-to-aws-with-terraform-7a8daf261dc0
 https://www.robustperception.io/automatically-monitoring-ec2-instances
+https://kbild.ch/blog/2019-02-18-awsprometheus/
 https://github.com/Oxalide/terraform-fargate-example
