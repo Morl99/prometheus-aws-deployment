@@ -7,6 +7,15 @@ resource "aws_iam_access_key" "prometheus" {
   user = aws_iam_user.prometheus.name
 }
 
+resource aws_secretsmanager_secret prometheus {
+  name = "prometheus/iam"
+}
+
+resource "aws_secretsmanager_secret_version" "prometheus" {
+  secret_id = aws_secretsmanager_secret.prometheus
+  secret_string = jsonencode({"KEY_ID"=aws_iam_access_key.prometheus.id, "SECRET" = aws_iam_access_key.prometheus.secret})
+}
+
 resource "aws_iam_user_policy" "prometheus_describe" {
   name = "ec2_describe"
   user = aws_iam_user.prometheus.name

@@ -7,8 +7,8 @@ scrape_configs:
   - job_name: 'node'
     ec2_sd_configs:
       - region: eu-central-1
-        access_key: ${ACCESS_KEY}
-        secret_key: ${SECRET_KEY}
+        access_key: ${KEY_ID}
+        secret_key: ${SECRET}
         port: 9100
     relabel_configs:
       - source_labels: [__meta_ec2_instance_id]
