@@ -1,8 +1,14 @@
+:imagesdir: doc
 = Prometheus AWS Deployment
 
 == Goal
 
 The goal of this project is to deploy a Prometheus installation in AWS using Terraform. Prometheus should use automatic EC2 discovery to discover new EC2 nodes. This project firmly follows infrastructure of code principle. Except where otherwise noted, no pre-existent infrastructure is needed.
+
+This Screenshot shows an example of the working service discovery in Prometheus:
+
+.Prometheus Targets
+image::prometheusTargets.png[]
 
 == Prerequisites
 
@@ -22,6 +28,8 @@ The following things are out of scope for this project, but could be required to
 . While I would never deploy any http components without the use of TLS, I was reluctant to spent any time on that in this example. It is relatively easy though, to use an ELB with an AWS certificate. But this requires dns with route53 and a correct dns zone. Nothing I wanted to set my focus on.
 . Persistant Storage for Prometheus
 .. Of course, this is a deal breaker. I learned at the "end", that Fargate does not support persistent storage. This means, that Fargate is not the right tool for the job, as persistence for Prometheus is probably a hard requirement. I would probably move away from ecs alltogether and just deploy the docker container on an ec2 instance with a docker deamon installed, where it would be easy to mount an ebs volume (or efs, if multi-az is required) and mount that to the docker container. Or even better, deploy it on an already existent Kubernetes cluster.
+. Securing Prometheus
+.. Prometheus is not secured. Ideally, it would be guarded by some kind of WebSSO, that checks, if the user is authenticated and authorized to access the data, but this depends on the IAM Infrastructure at the company. The easiest way would be to put Prometheus behind a Loadbalancer such as Nginx and configure the security there, e.g. use BasicAuth. A more sophisticated setup would use an ALB Authentication Rule that uses Amazon Cognito as an Identity Broker.
 
 == Architecture
 
