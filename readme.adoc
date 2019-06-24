@@ -19,15 +19,24 @@ The following things are out of scope for this project, but could be required to
 . Secure VPC Setup
 . Store tfstate files
 .. I cannot check them into source control, as these files also contain secrets. While it seems possible to encrypt them, it would probably be wiser to store the state in some other backend. I just added the files to .gitignore for the time being.
+. While I would never deploy any http components without the use of TLS, I was reluctant to spent any time on that in this example. It is relatively easy though, to use an ELB with an AWS certificate. But this requires dns with route53 and a correct dns zone. Nothing I wanted to set my focus on.
+. Persistant Storage for Prometheus
+.. Of course, this is a deal breaker. I learned at the "end", that Fargate does not support persistent storage. This means, that Fargate is not the right tool for the job, as persistence for Prometheus is probably a hard requirement. I would probably move away from ecs alltogether and just deploy the docker container on an ec2 instance with a docker deamon installed, where it would be easy to mount an ebs volume (or efs, if multi-az is required) and mount that to the docker container. Or even better, deploy it on an already existent Kubernetes cluster.
 
 == Architecture
 
 === Prometheus
-The prometheus server is deployed as an ECS container.
+The prometheus server is deployed as an ECS Fargate Container. The base of this deployment is a locally testable Dockerfile that is based on the official Prometheus Docker Image. The configuration is part of the Docker Image, with the IAM Credentials being injected through environment variables, that in turn are supplied by the AWS Secrets Manager.
 
 === EC2-Node
+The node itself if just a simple ec2 node that does nothing, but expose some metrics on port 9100. It resides in a public subnet, mainly to allow me to access it via ssh (of course usually we have a better concept for this, like a bastion host, or a vpn). In general, the installation code of the node-exporter should be reusable, either in form of a base image that is shared, or in form of a reusable script, that is just included in the user data of the ec2 nodes.
 
-The node itself if just a simple ec2 node that does nothing, but expose some metrics on port 9100. It resides in a public subnet, mainly to allow me to access it via ssh (of course usually we have a better concept for this, like a bastion host, or a vpn).
+=== Network
+While the network architecture is basic, it shows some of the things that are possible with the usage of Amazon VPC.
+
+Everything is placed in public subnets. Of course this is not a desired state, but it allows to circumvent the rather costly NAT Gateways (for a Free Tier account at least ;)).
+
+Security Groups limit the access of the metrics endpoints in a way, that only the prometheus instace is allowed to access Port 9100 of the ec2 nodes. This is achieved by using an ingress Rule that references the ingress security group of the prometheus instance.
 
 == References
 
