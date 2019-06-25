@@ -13,7 +13,7 @@ data "aws_ami" "amazon-linux-2" {
   }
 }
 
-module "ssh_security_group" {
+module "ssh-security-group" {
   source  = "terraform-aws-modules/security-group/aws//modules/ssh"
   version = "~> 3.0"
 
@@ -22,7 +22,7 @@ module "ssh_security_group" {
   name                = "ssh"
 }
 
-resource "aws_security_group" "ec2_node_exporter" {
+resource "aws_security_group" "ec2-node-exporter" {
   name        = "ec2-node-exporter-ingress"
   description = "allow inbound access from the prometheus only"
   vpc_id      = aws_vpc.main.id
@@ -31,7 +31,7 @@ resource "aws_security_group" "ec2_node_exporter" {
     protocol        = "tcp"
     from_port       = "9100"
     to_port         = "9100"
-    security_groups = [aws_security_group.prometheus_ingress.id]
+    security_groups = [aws_security_group.prometheus-ingress.id]
   }
 
   egress {
@@ -50,7 +50,7 @@ resource "aws_instance" "my-test-instance" {
   key_name                    = "carstenhoffmann"
   associate_public_ip_address = true
   vpc_security_group_ids      = [
-    aws_security_group.ec2_node_exporter.id,
-    module.ssh_security_group.this_security_group_id]
+    aws_security_group.ec2-node-exporter.id,
+    module.ssh-security-group.this_security_group_id]
   user_data                   = file("ec2/install_node_exporter.sh")
 }

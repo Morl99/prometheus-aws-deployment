@@ -10,6 +10,7 @@ resource "aws_iam_access_key" "prometheus" {
 
 resource aws_secretsmanager_secret prometheus-key-id {
   name = "prometheus/iam/key-id"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "prometheus-key-id" {
@@ -19,6 +20,7 @@ resource "aws_secretsmanager_secret_version" "prometheus-key-id" {
 
 resource aws_secretsmanager_secret prometheus-secret {
   name = "prometheus/iam/secret"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "prometheus-secret" {
@@ -29,8 +31,8 @@ data "aws_kms_key" "secretsmanager" {
   key_id = "alias/aws/secretsmanager"
 }
 
-resource "aws_iam_role" "prometheus_secrets" {
-  name = "prometheus_secrets"
+resource "aws_iam_role" "prometheus-secrets" {
+  name = "prometheus-secrets"
 
   assume_role_policy = <<EOF
 {
@@ -51,9 +53,9 @@ resource "aws_iam_role" "prometheus_secrets" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "prometheus_secrets" {
+resource "aws_iam_role_policy_attachment" "prometheus-secrets" {
   policy_arn = aws_iam_policy.ecs-prometheus-secret.arn
-  role       = aws_iam_role.prometheus_secrets.name
+  role       = aws_iam_role.prometheus-secrets.name
 }
 
 resource "aws_iam_policy" "ecs-prometheus-secret" {
@@ -89,7 +91,7 @@ resource "aws_iam_policy" "ecs-prometheus-secret" {
 }
 EOF
 }
-resource "aws_iam_user_policy" "prometheus_describe" {
+resource "aws_iam_user_policy" "prometheus-describe" {
   name = "ec2_describe"
   user = aws_iam_user.prometheus.name
 
@@ -109,8 +111,8 @@ resource "aws_iam_user_policy" "prometheus_describe" {
 EOF
 }
 
-// TODO this should be mounted to the Docker container to have persistent data
-resource "aws_ebs_volume" "prometheus_volume" {
+// FIXME this should be mounted to the Docker container to have persistent data, but we cannot do that with FARGATE
+resource "aws_ebs_volume" "prometheus-volume" {
   availability_zone = "eu-central-1a"
   size              = 80
 }
@@ -133,7 +135,7 @@ resource "aws_ecs_task_definition" "app" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.fargate_cpu
   memory                   = var.fargate_memory
-  execution_role_arn       = aws_iam_role.prometheus_secrets.arn
+  execution_role_arn       = aws_iam_role.prometheus-secrets.arn
   container_definitions    = <<DEFINITION
 [
   {
@@ -164,7 +166,7 @@ resource "aws_ecs_task_definition" "app" {
 DEFINITION
 }
 
-resource "aws_security_group" "prometheus_ingress" {
+resource "aws_security_group" "prometheus-ingress" {
   name        = "ecs-prometheus-ingress"
   description = "controls access to the prometheus web endpoint"
   vpc_id      = aws_vpc.main.id
@@ -191,7 +193,7 @@ resource "aws_ecs_service" "main" {
   desired_count   = "1"
   launch_type     = "FARGATE"
   network_configuration {
-    security_groups  = [aws_security_group.prometheus_ingress.id]
+    security_groups  = [aws_security_group.prometheus-ingress.id]
     subnets          = aws_subnet.public.*.id
     assign_public_ip = true
   }

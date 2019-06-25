@@ -5,7 +5,7 @@
 
 The goal of this project is to deploy a Prometheus installation in AWS using Terraform. Prometheus should use automatic EC2 discovery to discover new EC2 nodes. This project firmly follows infrastructure of code principle. Except where otherwise noted, no pre-existent infrastructure is needed.
 
-This Screenshot shows an example of the working service discovery in Prometheus:
+This screenshot shows an example of the working service discovery in Prometheus:
 
 .Prometheus Targets
 image::prometheusTargets.png[]
@@ -15,26 +15,13 @@ image::prometheusTargets.png[]
 The following assumptions are made about the environment where this deployment can be used
 
 . All Deployments are done in an AWS VPC with direct internet access, so no Proxy is needed.
-. I just assume, there exists an IAM user with the necessary permissions to run all the terraform commands. Of course setting this up securely in reality might be a task on its own. In my demo account, I just use an IAM user with the `AdministratorAccess` policy.
-
-== Out of scope
-
-The following things are out of scope for this project, but could be required to actually use it in a production environment
-
-. High availability of the Prometheus installation
-. Secure VPC Setup
-. Store tfstate files
-.. I cannot check them into source control, as these files also contain secrets. While it seems possible to encrypt them, it would probably be wiser to store the state in some other backend. I just added the files to .gitignore for the time being.
-. While I would never deploy any http components without the use of TLS, I was reluctant to spent any time on that in this example. It is relatively easy though, to use an ELB with an AWS certificate. But this requires dns with route53 and a correct dns zone. Nothing I wanted to set my focus on.
-. Persistant Storage for Prometheus
-.. Of course, this is a deal breaker. I learned at the "end", that Fargate does not support persistent storage. This means, that Fargate is not the right tool for the job, as persistence for Prometheus is probably a hard requirement. I would probably move away from ecs alltogether and just deploy the docker container on an ec2 instance with a docker deamon installed, where it would be easy to mount an ebs volume (or efs, if multi-az is required) and mount that to the docker container. Or even better, deploy it on an already existent Kubernetes cluster.
-. Securing Prometheus
-.. Prometheus is not secured. Ideally, it would be guarded by some kind of WebSSO, that checks, if the user is authenticated and authorized to access the data, but this depends on the IAM Infrastructure at the company. The easiest way would be to put Prometheus behind a Loadbalancer such as Nginx and configure the security there, e.g. use BasicAuth. A more sophisticated setup would use an ALB Authentication Rule that uses Amazon Cognito as an Identity Broker.
+. I just assume, there exists an IAM user with the necessary permissions to run all the terraform commands. Setting this up securely might be a challenge on its own. In my demo account, I just use an IAM user with the `AdministratorAccess` policy.
+. I choose Frankfurt as the target region, since it tends to be easier to comply with German regulations if everything is hosted in Germany. This hugely depends on the requirements. Prometheus should not collect any personalized data anyways, so in theory a single Prometheus instance can scrape data from multiple regions.
 
 == Architecture
 
 === Prometheus
-The prometheus server is deployed as an ECS Fargate Container. The base of this deployment is a locally testable Dockerfile that is based on the official Prometheus Docker Image. The configuration is part of the Docker Image, with the IAM Credentials being injected through environment variables, that in turn are supplied by the AWS Secrets Manager.
+The prometheus server is deployed as an ECS Fargate Container. The base of this deployment is a locally testable Dockerfile that is based on the official Prometheus Docker Image. The configuration is part of the Docker Image, with the IAM Credentials being injected through environment variables, that in turn are supplied by the AWS Secrets Manager. The IAM credentials only provide the necessary permissions for deploying the service, following the principle of least privilege.
 
 === EC2-Node
 The node itself if just a simple ec2 node that does nothing, but expose some metrics on port 9100. It resides in a public subnet, mainly to allow me to access it via ssh (of course usually we have a better concept for this, like a bastion host, or a vpn). In general, the installation code of the node-exporter should be reusable, either in form of a base image that is shared, or in form of a reusable script, that is just included in the user data of the ec2 nodes.
@@ -44,7 +31,41 @@ While the network architecture is basic, it shows some of the things that are po
 
 Everything is placed in public subnets. Of course this is not a desired state, but it allows to circumvent the rather costly NAT Gateways (for a Free Tier account at least ;)).
 
-Security Groups limit the access of the metrics endpoints in a way, that only the prometheus instace is allowed to access Port 9100 of the ec2 nodes. This is achieved by using an ingress Rule that references the ingress security group of the prometheus instance.
+Security Groups limit the access of the metrics endpoints in a way, that only the prometheus instance is allowed to access Port 9100 of the ec2 nodes. This is achieved by using an ingress rule that references the ingress security group of the prometheus instance.
+
+== Out of scope
+
+The following things are out of scope for this project, but could be required to actually operate this solution in a production environment:
+
+. High availability of the Prometheus installation, including self healing
+. Secure VPC Setup
+. Store tfstate files
+.. I cannot check them into source control, as these files also contain secrets. While it seems possible to encrypt them, it would probably be wiser to store the state in some other backend. I just added the files to .gitignore for the time being.
+. While I would never deploy any http components without the use of TLS, I was reluctant to spent any time on that in this example. It is relatively easy though, to use an ELB with an AWS certificate. But this requires dns with route53 and a correct dns zone. Nothing I wanted to set my focus on.
+. Persistent Storage for Prometheus
+.. Of course, this is a deal breaker. I learned at the "end", that Fargate does not support persistent storage. This means, that Fargate is not the right tool for the job, as persistence for Prometheus is probably a hard requirement. I would likely move away from ecs all together and just deploy the docker container on an ec2 instance with a docker deamon installed, where it would be easy to mount an ebs volume (or efs, if multi-az is required) and mount that to the docker container. Or even better, deploy it on an already existent Kubernetes cluster.
+. Securing Prometheus
+.. Prometheus is not secured. Ideally, it would be guarded by some kind of WebSSO, that checks, if the user is authenticated and authorized to access the data, but this depends on the IAM Infrastructure at the company. The easiest way would be to put Prometheus behind a Loadbalancer such as Nginx and configure the security there, e.g. use BasicAuth. A more sophisticated setup would use an ALB Authentication Rule that uses Amazon Cognito as an Identity Broker.
+. Configuring acutal metrics/graphs/alerts
+.. I would likely deploy Grafana to configure some shiny dashboards. This combines the great options that prometheus has for creating/storing time series data with the easy to use dashboard editing functions of Grafana
+.. Metrics/Alertings can be nicely configured as code in the Dockerfile as well
+. A CI/CD Pipeline with staging
+.. In order to test any changes made to either the docker image or the deployment, we would want a full fledged CI/CD Pipeline, that builds the Dockerfile, deploys it into a test environment, tests if it works correctly and stages the changes into production.
+. Modularizing the infrastructure code
+.. While I did my best to structure the code, my lack of experience with terraform probably led to a semi optimal solution. This is especially true for the ec2 instance, stuff like the security group, and possibly the node-exporter install script could be modularized. The terraform module system looks promising for that, especially for reocurring architectural patterns.
+
+== Operations
+
+. The prometheus base image version needs to be increased regularly. This would not be a manual task though, as I would put some automation in place, that automatically opens a merge request once a new version becomes available. This merge request would automatically be build and checked, so that the decision to actually merge it becomes a no brainer, but is still an active decision of the team.
+. The prometheus instance itself should be monitored, at least for uptime. I assume, that there is an existing uptime monitoring, which can be leveraged here.
+. From time to time, the terraform modules and providers need to be updated.
+. The node exporter version needs to be kept up2date. Still assuming, that this is a centrally managed script, it is important that this is tested thoroughly. It would be best, if each team could decide to pull changes of the script concisiouly, because these changes could then be tested in a non-production environment. Rolling out these changes centrally directly to production of other teams always provides a risk. A nice solution for this is, to have a scanbot, that scans all Git repositories that use the script. If an update is available, it opens a merge request for the new version, and the team that owns the ec2 instance can test and merge this change on its own time.
+
+== Other learnings
+
+Using secrets with the secrets manager, and running a `terraform destroy` command followed by a `terraform apply` will not work, since secrets are marked for deletion, and kept a couple of days. Gladly, this was already discovered by the terraform aws provider project and there is a solution: https://github.com/terraform-providers/terraform-provider-aws/issues/5127 I feel it is safe to instantly delete secrets that are automatically created by terraform, since a recreation is just a matter of `terraform apply`.
+
+I quickly got lost in the way I write terraform resources. It would be helpful to have automatic code formatting and a linter, together with some basy style guides (like snake or spinal case for resource names). I found a promising linter that can also check for validation errors, that terraform itself can not check: https://github.com/wata727/tflint Might be worth exploring if it can be integrated in the CI/CD pipeline.
 
 == References
 
